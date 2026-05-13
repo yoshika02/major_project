@@ -1,0 +1,11 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+
+export async function GET(request: NextRequest) {
+    const email = request.nextUrl.searchParams.get("email") || "";
+    if (!email) {
+        return NextResponse.json({ available: false });
+    }
+    const existing = await prisma.user.findUnique({ where: { email } });
+    return NextResponse.json({ available: !Boolean(existing) });
+}
