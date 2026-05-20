@@ -1,9 +1,9 @@
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import { SignJWT, jwtVerify } from "jose";
 import { ACCESS_TOKEN_MAX_AGE, REFRESH_TOKEN_MAX_AGE } from "@/lib/constants";
 
-const accessTokenSecret = process.env.JWT_ACCESS_SECRET ?? "dev-access-secret";
-const refreshTokenSecret = process.env.JWT_REFRESH_SECRET ?? "dev-refresh-secret";
+// The secrets must be Uint8Array for jose
+const accessTokenSecret = new TextEncoder().encode(process.env.JWT_ACCESS_SECRET ?? "dev-access-secret");
+const refreshTokenSecret = new TextEncoder().encode(process.env.JWT_REFRESH_SECRET ?? "dev-refresh-secret");
 
 export interface TokenPayload {
     userId: string;
@@ -11,40 +11,103 @@ export interface TokenPayload {
     email: string;
 }
 
-export function hashPassword(password: string) {
-    return bcrypt.hash(password, 12);
+// Helper: Convert ArrayBuffer to Hex String
+function bufferToHex(buffer: ArrayBuffer) {
+    return Array.from(new Uint8Array(buffer))
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("");
 }
 
-export function comparePassword(password: string, hashed: string) {
-    return bcrypt.compare(password, hashed);
+// Helper: Convert Hex String to ArrayBuffer
+function hexToBuffer(hex: string) {
+    const bytes = new Uint8Array(Math.ceil(hex.length / 2));
+    for (let i = 0; i < bytes.length; i++) {
+        bytes[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
+    }
+    return bytes.buffer;
 }
 
-export function issueAccessToken(payload: TokenPayload) {
-    return jwt.sign(payload, accessTokenSecret, {
-        algorithm: "HS256",
-        expiresIn: `${ACCESS_TOKEN_MAX_AGE}s`,
-    });
+// Cloudflare Edge compatible password hashing using PBKDF2
+export async function hashPassword(password: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(password),
+        { name: "PBKDF2" },
+        false,
+        ["deriveBits", "deriveKey"]
+    );
+    const hash = await crypto.subtle.deriveBits(
+        {
+            name: "PBKDF2",
+            salt: salt,
+            iterations: 100000,
+            hash: "SHA-256",
+        },
+        keyMaterial,
+        256
+    );
+    
+    return bufferToHex(salt) + ":" + bufferToHex(hash);
 }
 
-export function issueRefreshToken(payload: TokenPayload) {
-    return jwt.sign(payload, refreshTokenSecret, {
-        algorithm: "HS256",
-        expiresIn: `${REFRESH_TOKEN_MAX_AGE}s`,
-    });
+// Verify password against PBKDF2 hash
+export async function comparePassword(password: string, hashed: string): Promise<boolean> {
+    const [saltHex, hashHex] = hashed.split(":");
+    if (!saltHex || !hashHex) return false;
+    
+    const encoder = new TextEncoder();
+    const salt = hexToBuffer(saltHex);
+    const keyMaterial = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(password),
+        { name: "PBKDF2" },
+        false,
+        ["deriveBits", "deriveKey"]
+    );
+    const hashToVerify = await crypto.subtle.deriveBits(
+        {
+            name: "PBKDF2",
+            salt: salt,
+            iterations: 100000,
+            hash: "SHA-256",
+        },
+        keyMaterial,
+        256
+    );
+    
+    return bufferToHex(hashToVerify) === hashHex;
 }
 
-export function verifyAccessToken(token: string) {
-    return jwt.verify(token, accessTokenSecret) as TokenPayload;
+export async function issueAccessToken(payload: TokenPayload) {
+    return await new SignJWT(payload as any)
+        .setProtectedHeader({ alg: "HS256" })
+        .setExpirationTime(`${ACCESS_TOKEN_MAX_AGE}s`)
+        .sign(accessTokenSecret);
 }
 
-export function verifyRefreshToken(token: string) {
-    return jwt.verify(token, refreshTokenSecret) as TokenPayload;
+export async function issueRefreshToken(payload: TokenPayload) {
+    return await new SignJWT(payload as any)
+        .setProtectedHeader({ alg: "HS256" })
+        .setExpirationTime(`${REFRESH_TOKEN_MAX_AGE}s`)
+        .sign(refreshTokenSecret);
 }
 
-export function hashToken(token: string) {
-    return bcrypt.hash(token, 12);
+export async function verifyAccessToken(token: string) {
+    const { payload } = await jwtVerify(token, accessTokenSecret);
+    return payload as unknown as TokenPayload;
 }
 
-export function compareToken(token: string, hashed: string) {
-    return bcrypt.compare(token, hashed);
+export async function verifyRefreshToken(token: string) {
+    const { payload } = await jwtVerify(token, refreshTokenSecret);
+    return payload as unknown as TokenPayload;
+}
+
+export async function hashToken(token: string) {
+    return await hashPassword(token);
+}
+
+export async function compareToken(token: string, hashed: string) {
+    return await comparePassword(token, hashed);
 }

@@ -12,25 +12,48 @@ export default function LoginPage() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
-    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-        event.preventDefault();
+    async function handleSubmit(event?: React.MouseEvent<HTMLButtonElement> | React.FormEvent<HTMLFormElement>) {
+        if (event && 'preventDefault' in event) event.preventDefault();
         setLoading(true);
         setError(null);
-        const response = await fetch(api.auth.login, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password }),
-        });
 
-        const body = await response.json();
-        setLoading(false);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
 
-        if (!response.ok) {
-            setError(body.error || "Unable to sign in.");
-            return;
+        try {
+            const response = await fetch(api.auth.login, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
+                signal: controller.signal,
+            });
+
+            let body: Record<string, unknown> | null = null;
+            try {
+                body = (await response.json()) as Record<string, unknown>;
+            } catch {
+                body = null;
+            }
+
+            if (!response.ok) {
+                const errMsg = body && typeof body.error === 'string' ? body.error : "Unable to sign in.";
+                setError(errMsg);
+                return;
+            }
+
+            // Success — navigate
+            window.location.href = "/dashboard";
+        } catch (err: unknown) {
+            const e = err as { name?: string };
+            if (e?.name === 'AbortError') {
+                setError('Request timed out. Please try again.');
+            } else {
+                setError('Network error. Please try again.');
+            }
+        } finally {
+            clearTimeout(timeout);
+            setLoading(false);
         }
-
-        window.location.href = "/dashboard";
     }
 
     return (
@@ -52,7 +75,7 @@ export default function LoginPage() {
                         <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="••••••••" />
                     </div>
                     {error ? <p className="text-sm text-rose-600">{error}</p> : null}
-                    <Button type="submit" disabled={loading} className="w-full">{loading ? "Signing in..." : "Sign in"}</Button>
+                    <Button type="button" onClick={handleSubmit} disabled={loading} className="w-full">{loading ? "Signing in..." : "Sign in"}</Button>
                 </form>
 
                 <p className="mt-6 text-center text-sm text-slate-500">

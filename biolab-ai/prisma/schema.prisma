@@ -2,11 +2,12 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 model User {
@@ -14,14 +15,11 @@ model User {
   name           String
   email          String   @unique
   password_hash  String
-  role           Role     @default(RESEARCHER)
+  role           String   @default("RESEARCHER")
   department     String?
   institution    String?
-  avatar_url     String?
-  is_active      Boolean  @default(true)
   created_at     DateTime @default(now())
   last_login     DateTime?
-  updated_at     DateTime @default(now()) @updatedAt
 
   // Relations
   sessions       Session[]
@@ -63,7 +61,7 @@ model ActivityLog {
 model Notification {
   id         String           @id @default(cuid())
   user_id    String
-  type       NotificationType @default(INFO)
+  type       String           @default("INFO")
   title      String
   message    String?
   link       String?
@@ -76,14 +74,4 @@ model Notification {
   @@map("notifications")
 }
 
-enum Role {
-  RESEARCHER
-  LAB_HEAD
-  ADMIN
-}
 
-enum NotificationType {
-  ALERT
-  INFO
-  WARNING
-}

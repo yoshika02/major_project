@@ -18,7 +18,7 @@ export default function RegisterPage() {
     const [email, setEmail] = useState("");
     const [department, setDepartment] = useState("");
     const [institution, setInstitution] = useState("");
-    const [role, setRole] = useState("researcher");
+    const [role, setRole] = useState("RESEARCHER");
     const [inviteCode, setInviteCode] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState<string | null>(null);
@@ -32,33 +32,54 @@ export default function RegisterPage() {
             return;
         }
         const res = await fetch(api.auth.checkEmail(value));
-        const data = await res.json();
-        setEmailStatus(data.available ? "Available" : "Already in use");
+        const data = await res.json().catch(() => null);
+        setEmailStatus(data?.available ? "Available" : "Already in use");
     }
 
-    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-        event.preventDefault();
+    async function handleSubmit(event?: React.MouseEvent<HTMLButtonElement> | React.FormEvent<HTMLFormElement>) {
+        if (event && 'preventDefault' in event) event.preventDefault();
         setLoading(true);
         setError(null);
 
-        const response = await fetch(api.auth.register, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, email, department, institution, role, inviteCode, password }),
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
 
-        const body = await response.json();
-        setLoading(false);
+        try {
+            const response = await fetch(api.auth.register, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, email, department, institution, role, inviteCode, password }),
+                signal: controller.signal,
+            });
 
-        if (!response.ok) {
-            setError(body.error || "Unable to register.");
-            return;
+            let body: Record<string, unknown> | null = null;
+            try {
+                body = (await response.json()) as Record<string, unknown>;
+            } catch {
+                body = null;
+            }
+
+            if (!response.ok) {
+                const errMsg = body && typeof body.error === 'string' ? body.error : "Unable to register.";
+                setError(errMsg);
+                return;
+            }
+
+            setSuccessMessage("You have successfully registered. Please sign in to continue.");
+            setTimeout(() => {
+                window.location.href = "/dashboard";
+            }, 3000);
+        } catch (err: unknown) {
+            const e = err as { name?: string };
+            if (e?.name === 'AbortError') {
+                setError('Request timed out. Please try again.');
+            } else {
+                setError('Network error. Please try again.');
+            }
+        } finally {
+            clearTimeout(timeout);
+            setLoading(false);
         }
-
-        setSuccessMessage("You have successfully registered. Please sign in to continue.");
-        setTimeout(() => {
-            window.location.href = "/dashboard";
-        }, 3000);
     }
 
     return (
@@ -93,12 +114,12 @@ export default function RegisterPage() {
                     <div>
                         <label className="mb-2 block text-sm font-medium text-slate-700">Role</label>
                         <select value={role} onChange={(event) => setRole(event.target.value)} className="w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100">
-                            <option value="researcher">Researcher</option>
-                            <option value="lab_head">Lab Head</option>
-                            <option value="admin">Admin</option>
+                            <option value="RESEARCHER">Researcher</option>
+                            <option value="LAB_HEAD">Lab Head</option>
+                            <option value="ADMIN">Admin</option>
                         </select>
                     </div>
-                    {role === "admin" ? (
+                    {role === "ADMIN" ? (
                         <div>
                             <label className="mb-2 block text-sm font-medium text-slate-700">Admin invite code</label>
                             <Input value={inviteCode} onChange={(event) => setInviteCode(event.target.value)} required />
@@ -131,7 +152,7 @@ export default function RegisterPage() {
                             </p>
                         </div>
                     ) : (
-                        <Button type="submit" disabled={loading} className="w-full">{loading ? "Creating account..." : "Register"}</Button>
+                        <Button type="button" onClick={handleSubmit} disabled={loading} className="w-full">{loading ? "Creating account..." : "Register"}</Button>
                     )}
                 </form>
 
