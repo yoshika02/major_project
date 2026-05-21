@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyRefreshToken, issueAccessToken, type TokenPayload } from "@/lib/auth";
+import { verifyRefreshToken, issueAccessToken } from "@/lib/auth";
 import { ACCESS_TOKEN_MAX_AGE } from "@/lib/constants";
 
 export const dynamic = 'force-dynamic';

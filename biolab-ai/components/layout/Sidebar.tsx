@@ -55,7 +55,7 @@ export function Sidebar() {
     return (
         <aside className="fixed left-0 top-0 z-20 h-screen w-60 border-r border-slate-200 bg-slate-950 px-3 py-6 text-slate-100 sm:w-60">
             <div className="mb-10 flex items-center gap-3 px-3">
-                <img src="/biolab-logo.svg" alt="BioLab AI Logo" className="h-12 w-12" />
+                <img src="/biolab-logo.svg" alt="BioLab AI Logo" className="h-12 w-12" suppressHydrationWarning />
                 <div>
                     <p className="text-sm font-semibold uppercase tracking-[0.3em] text-slate-300">BioLab</p>
                     <p className="text-lg font-semibold">AI Platform</p>

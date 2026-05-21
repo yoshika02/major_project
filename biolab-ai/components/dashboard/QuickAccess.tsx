@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { FileText, BookOpen, Boxes, FlaskRound, Droplet, ShieldCheck } from "lucide-react";
-import { Card } from "@/components/ui/Card";
 
 const items = [
     { label: "Protocol", href: "/dashboard/protocol", icon: FileText, description: "Create and manage lab protocols." },

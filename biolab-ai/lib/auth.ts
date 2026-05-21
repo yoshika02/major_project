@@ -48,7 +48,7 @@ export async function hashPassword(password: string): Promise<string> {
         keyMaterial,
         256
     );
-    
+
     return bufferToHex(salt) + ":" + bufferToHex(hash);
 }
 
@@ -56,7 +56,7 @@ export async function hashPassword(password: string): Promise<string> {
 export async function comparePassword(password: string, hashed: string): Promise<boolean> {
     const [saltHex, hashHex] = hashed.split(":");
     if (!saltHex || !hashHex) return false;
-    
+
     const encoder = new TextEncoder();
     const salt = hexToBuffer(saltHex);
     const keyMaterial = await crypto.subtle.importKey(
@@ -76,19 +76,19 @@ export async function comparePassword(password: string, hashed: string): Promise
         keyMaterial,
         256
     );
-    
+
     return bufferToHex(hashToVerify) === hashHex;
 }
 
 export async function issueAccessToken(payload: TokenPayload) {
-    return await new SignJWT(payload as any)
+    return await new SignJWT(payload as Record<string, unknown>)
         .setProtectedHeader({ alg: "HS256" })
         .setExpirationTime(`${ACCESS_TOKEN_MAX_AGE}s`)
         .sign(accessTokenSecret);
 }
 
 export async function issueRefreshToken(payload: TokenPayload) {
-    return await new SignJWT(payload as any)
+    return await new SignJWT(payload as Record<string, unknown>)
         .setProtectedHeader({ alg: "HS256" })
         .setExpirationTime(`${REFRESH_TOKEN_MAX_AGE}s`)
         .sign(refreshTokenSecret);

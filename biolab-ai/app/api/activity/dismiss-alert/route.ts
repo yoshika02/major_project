@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAccessToken, type TokenPayload } from "@/lib/auth";
+import { verifyAccessToken } from "@/lib/auth";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'edge';
@@ -12,9 +12,7 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-        const payload = await verifyAccessToken(token);
-        const { alertId } = await request.json();
-
+        await verifyAccessToken(token);
         // Dismiss alert logic would go here
         // For now, just return success
         return NextResponse.json({ success: true });

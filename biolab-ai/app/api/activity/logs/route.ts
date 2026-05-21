@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { verifyAccessToken, type TokenPayload } from "@/lib/auth";
+import { verifyAccessToken } from "@/lib/auth";
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
