@@ -4,7 +4,7 @@ import { comparePassword, issueAccessToken, issueRefreshToken, hashToken, type T
 import { AUTH_COOKIE_OPTIONS, REFRESH_TOKEN_MAX_AGE, ACCESS_TOKEN_MAX_AGE } from "@/lib/constants";
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
     // Read raw body for debugging and robust parsing

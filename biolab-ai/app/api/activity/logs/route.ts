@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { verifyAccessToken, type TokenPayload } from "@/lib/auth";
 
 export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
     const token = request.cookies.get("access_token")?.value;

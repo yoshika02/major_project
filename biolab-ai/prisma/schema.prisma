@@ -7,7 +7,20 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  researcher
+  lab_head
+  admin
+}
+
+enum NotificationType {
+  alert
+  info
+  warning
 }
 
 model User {
@@ -15,7 +28,7 @@ model User {
   name           String
   email          String   @unique
   password_hash  String
-  role           String   @default("RESEARCHER")
+  role           Role     @default(researcher)
   department     String?
   institution    String?
   created_at     DateTime @default(now())
@@ -61,7 +74,7 @@ model ActivityLog {
 model Notification {
   id         String           @id @default(cuid())
   user_id    String
-  type       String           @default("INFO")
+  type       NotificationType @default(info)
   title      String
   message    String?
   link       String?
